@@ -1,0 +1,13 @@
+[META]
+DOL_Office = "__TEMPLATE__"
+towgs84 = [204.5,837.9,294.8]
+COLUMN_SPEC = [ "MRK_DOL" ,"NORTHING","EASTING" ]
+TOML_SPEC =  [ "SEQ_NUM", "MRK_SEQ", "MRK_DOL" ,"NORTHING","EASTING" ]
+
+[RV25J_CENTER]
+view_scale = 0.5   # only!!! 0.25  0.5   1.0
+
+[Deed]
+Survey_Type = "MAP-L1"
+EPSG = 24047            # 24048
+
