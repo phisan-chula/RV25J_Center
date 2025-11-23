@@ -12,4 +12,13 @@ Plotting: During verification, the component plots the parcel boundary (*_plot.p
 
 Geospatial Output: A final script (ParcelCadastre.py) processes all verified *_OCRedit.toml files, transforms coordinates (e.g., Indian 1975 UTM) to WGS84, and outputs the final data as GPKG files
 
+# Integrated TOML Verification and Editing
+
+During the verification process, an integrated TOML editor allows users to review and modify the TOML file directly.
+After each update, the parcel is immediately re-plotted for visual confirmation.
+![RV25J GUI – Editing Mode](https://raw.githubusercontent.com/phisan-chula/RV25J_Center/main/App_RV25J_GUI_editing.png)
+
+# RV25J Table Selection and Verification – All in One Place
+
+The RV25J Center provides a unified interface where users can select tables, verify OCR results, and visualize parcel geometry seamlessly.
 ![RV25J GUI](https://raw.githubusercontent.com/phisan-chula/RV25J_Center/main/App_RV25J_GUI.png)
