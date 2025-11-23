@@ -11,3 +11,5 @@ Verification: The user verifies and edits the extracted coordinates using OCR_Ve
 Plotting: During verification, the component plots the parcel boundary (*_plot.png) from the edited coordinates to ensure data accuracy.
 
 Geospatial Output: A final script (ParcelCadastre.py) processes all verified *_OCRedit.toml files, transforms coordinates (e.g., Indian 1975 UTM) to WGS84, and outputs the final data as GPKG files
+
+![RV25J GUI](https://raw.githubusercontent.com/phisan-chula/RV25J_Center/main/App_RV25J_GUI.png)
