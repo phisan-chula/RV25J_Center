@@ -1,0 +1,14 @@
+[META]
+DOL_Office = "__TEMPLATE__"
+
+[Deed]
+Survey_Type = "MAP-L1"
+EPSG = 24047
+unit = "meter"
+polygon_closed = false
+marker = [
+  [1, "A", "s32", 11.353, 711562.689],
+  [2, "B", "s31", 62.146, 711624.835],
+  [3, "C", "s8.0.", 19.631, 711644.466],
+  [4, "D", "533", 70.424, 711574.042],
+]
