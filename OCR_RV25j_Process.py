@@ -113,34 +113,12 @@ class RV25jProcessor:
         out_cols = [c for c in self.COLUMN_SPEC if c]
         rows = []
 
-        # Find the correct indices for the columns in the raw table (assuming a 1-to-1 mapping)
-        # We need the indices of the input raw table columns that correspond to our desired columns.
-        
-        # Original logic assumed fixed indexing based on the split string "MARKER,,NORTHING,EASTING"
-        # We need to adapt it to use the new list. 
-        # Since we cannot inspect the raw HTML table structure here, we'll keep the loop structure 
-        # but change the indices to refer to the raw dataframe columns (0, 1, 2, ...).
-        # Assuming the data is in the order [MRK_DOL, NORTHING, EASTING] in the raw table columns 1, 2, 3...
-        # Let's map raw column index to output name based on the old logic (where raw column 0 was MARKER, 2 was NORTHING, 3 was EASTING)
-        
-        # Map output column names to the index they should take from the raw DataFrame (adjusting for removal of blank columns)
-        # If the input table only has 3 relevant columns, they are likely at indices 0, 1, 2. 
-        
-        # New mapping based on expected COLUMN_SPEC = [ "MRK_DOL" ,"NORTHING","EASTING" ]
-        # Assumes raw table columns are [1, 2, 3] in order, which is the most common result for simple table OCR.
-        
-        # Since the original file used 'MARKER,,NORTHING,EASTING' which suggests ignoring raw index 1, 
-        # let's assume raw column index 0 maps to 'MRK_DOL', 1 maps to 'NORTHING', and 2 maps to 'EASTING'
-        # if the OCR output is clean. If the OCR table is a fixed width table, this mapping is key.
-        
-        # Original columns were: [0: MARKER, 1: (empty), 2: NORTHING, 3: EASTING]
-        # New columns are: [0: MRK_DOL, 1: NORTHING, 2: EASTING]
         # This requires manually specifying the index mapping:
 
         COL_MAP = {
             self.COLUMN_SPEC[0]: 0, # MRK_DOL from raw column 0
-            self.COLUMN_SPEC[1]: 1, # NORTHING from raw column 1
-            self.COLUMN_SPEC[2]: 2  # EASTING from raw column 2
+            self.COLUMN_SPEC[1]: 2, # NORTHING from raw column 2
+            self.COLUMN_SPEC[2]: 3  # EASTING from raw column 3
         }
         
         # We must use the indices of df_raw that correspond to the desired columns
@@ -382,10 +360,15 @@ class RV25jProcessor:
 def main():
     parser = argparse.ArgumentParser(description="RV25j OCR → TOML (Plotting Removed)")
     parser.add_argument("folder", help="Folder containing *_table.jpg")
+    parser.add_argument(
+        "--skip-ocr", 
+        action="store_true", 
+        help="Skip the OCR process and use existing *_tbl*.md files for parsing."
+    )
     
     args = parser.parse_args()
     
-    processor = RV25jProcessor(args.folder, skip_ocr=False) 
+    processor = RV25jProcessor(args.folder, skip_ocr=args.skip_ocr) 
     processor.process()
 
 
