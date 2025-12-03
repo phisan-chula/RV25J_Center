@@ -79,8 +79,8 @@ class ImageSelect(ttk.Frame):
 
     def _get_base_path(self) -> Path | None:
         """
-        Derives the base path (the part before _RV25J.jpg) as a Path object.
-        E.g., C:/data/scan_001_RV25J.jpg -> Path(C:/data/scan_001)
+        Derives the base file stem (the part before _RV25J.jpg) as a string.
+        E.g., C:/data/scan_001_RV25J.jpg -> "scan_001"
         """
         if not self.image_path:
             return None
@@ -96,8 +96,31 @@ class ImageSelect(ttk.Frame):
             # Fallback to the original stem if the marker is not found
             base_stem = self.image_path.stem 
             
-        # Reconstruct the path using the parent directory and the new base stem
-        return self.image_path.parent / base_stem
+        return base_stem
+
+    def _get_output_dir(self) -> Path | None:
+        """
+        Calculates the output directory path based on the image prefix.
+        Creates the directory if it doesn't exist.
+        Returns: Path to the new directory (e.g., C:/data/scan_001/)
+        """
+        base_stem = self._get_base_path()
+        if not self.image_path or not base_stem:
+            self.log("ERROR: Image path or prefix is missing.")
+            return None
+
+        # Create the new directory path (sibling to the original image)
+        # e.g., C:/data/scan_001_RV25J.jpg -> C:/data/scan_001/
+        output_dir = self.image_path.parent / base_stem
+        
+        try:
+            # Create directory if it does not exist (mkdir -p)
+            output_dir.mkdir(parents=True, exist_ok=True)
+            self.log(f"INFO: Created/Ensured output directory: {output_dir.name}")
+            return output_dir
+        except Exception as e:
+            self.log(f"ERROR: Failed to create output directory {output_dir.name}: {e}")
+            return None
 
     def load_image(self, path):
         """Loads a new image from the given file path."""
@@ -112,11 +135,18 @@ class ImageSelect(ttk.Frame):
             self.log(f"Image loaded: {self.image_path.name} ({self.original_image.width}x{self.original_image.height})")
             
             self.clear_selection()
+            
+            # CRITICAL FIX 1: Load existing selection BEFORE calling set_scale
+            self._load_existing_selection() 
+
             self.scale_factor = 1.0 
             self.set_scale(self.scale_factor) 
             
-            self._load_existing_selection()
-
+            # CRITICAL FIX 2: Explicitly guarantee the selection is drawn AFTER set_scale 
+            # and any potential Configure/resize events triggered by it have settled.
+            if self.original_rect_coords:
+                self.draw_selection_from_original()
+            
         except FileNotFoundError:
             self.log(f"ERROR: Image file not found at {self.image_path}")
             self.clear_image()
@@ -174,22 +204,21 @@ class ImageSelect(ttk.Frame):
         
         self.log(f"Image scaled to {scale:.2f}x ({new_width}x{new_height}).")
         
+        # NOTE: draw_selection_from_original is called from load_image now (for guarantee)
+        # We leave this check here in case set_scale is called manually (e.g., from resize or zoom button)
         if self.original_rect_coords:
             self.draw_selection_from_original()
 
     def _load_existing_selection(self):
-        """Reads *_rect.json and draws the existing ROI if found."""
-        if not self.image_path:
+        """Reads *_rect.json from the new output directory and draws the existing ROI if found."""
+        output_dir = self._get_output_dir()
+        base_stem = self._get_base_path()
+        
+        if not output_dir or not base_stem:
             return
 
-        base_path = self._get_base_path()
-        if not base_path:
-            return
-
-        json_filepath = base_path.with_suffix('.json')
-        # Correct output file name: *_rect.json
-        json_filepath = json_filepath.parent / f"{json_filepath.stem}_rect.json"
-
+        # The JSON file will now be inside the new directory: [output_dir]/[base_stem]_rect.json
+        json_filepath = output_dir / f"{base_stem}_rect.json"
         if json_filepath.exists():
             try:
                 with open(json_filepath, 'r') as f:
@@ -227,6 +256,7 @@ class ImageSelect(ttk.Frame):
         if self.rect_id:
             self.canvas.delete(self.rect_id)
         
+        # Redraw the rectangle using the canvas coordinates
         self.rect_id = self.canvas.create_rectangle(
             cx1, cy1, cx2, cy2, 
             outline='red', width=2
@@ -317,25 +347,23 @@ class ImageSelect(ttk.Frame):
         return [x_min, y_min, x_max, y_max]
 
     def save_rect_to_json(self):
-        """Saves the ROI coordinates to a JSON file (overwriting existing file)."""
-        if self.original_rect_coords is None or not self.image_path:
-            self.log("ERROR: No valid selection or image loaded to save.")
+        """
+        Saves the ROI coordinates to a JSON file inside the new output directory.
+        """
+        if self.original_rect_coords is None:
+            self.log("ERROR: No valid selection to save.")
+            return None
+            
+        output_dir = self._get_output_dir()
+        base_stem = self._get_base_path()
+        if not output_dir or not base_stem:
+            self.log("ERROR: Output directory could not be determined/created.")
             return None
 
         original_coords = self._convert_to_original_coords()
-        if not original_coords:
-            self.log("ERROR: Selection data is invalid.")
-            return None
-
-        base_path = self._get_base_path()
-        if not base_path:
-            self.log("ERROR: Could not derive base file name.")
-            return None
-            
-        # Define output path: /path/to/scan_001_rect.json
-        json_filepath = base_path.with_suffix('.json')
-        json_filepath = json_filepath.parent / f"{json_filepath.stem}_rect.json"
         
+        # Define output path: [output_dir]/[base_stem]_rect.json
+        json_filepath = output_dir / f"{base_stem}_rect.json"
         data = {
             "source_image": str(self.image_path), # Store path as string
             "scale_factor_at_selection": self.scale_factor,
@@ -350,35 +378,38 @@ class ImageSelect(ttk.Frame):
         try:
             with open(json_filepath, 'w') as f:
                 json.dump(data, f, indent=4)
-            self.log(f"INFO: ROI coordinates overwritten to {json_filepath.name}")
+            self.log(f"INFO: ROI coordinates overwritten to {json_filepath.name} inside {output_dir.name}")
             return original_coords
         except Exception as e:
             self.log(f"ERROR saving JSON file: {e}")
             return None
 
     def clip_and_save_image(self, original_coords):
-        """Clips the original image based on coordinates and saves it as *_table.jpg (overwriting)."""
+        """
+        Clips the original image based on coordinates and saves it as *_table.jpg 
+        inside the new output directory.
+        """
         if self.original_image is None or not original_coords:
             self.log("ERROR: Cannot clip image, missing original or coordinates.")
             return
 
         crop_area = tuple(original_coords)
         
-        base_path = self._get_base_path()
-        if not base_path:
-            self.log("ERROR: Could not derive base file name for clipping.")
+        output_dir = self._get_output_dir()
+        base_stem = self._get_base_path()
+        if not output_dir or not base_stem:
+            self.log("ERROR: Output directory could not be determined/created.")
             return
             
-        # CORRECTED OUTPUT EXTENSION to .jpg
-        jpg_filepath = base_path.with_suffix('.jpg')
-        jpg_filepath = jpg_filepath.parent / f"{jpg_filepath.stem}_table.jpg"
+        # Define output path: [output_dir]/[base_stem]_table.jpg
+        jpg_filepath = output_dir / f"{base_stem}_table.jpg"
         
         try:
             clipped_image = self.original_image.crop(crop_area)
             
             # Save format is JPEG, file extension is jpg
             clipped_image.save(jpg_filepath, format="JPEG", quality=95)
-            self.log(f"INFO: Clipped image overwritten and saved to {jpg_filepath.name}")
+            self.log(f"INFO: Clipped image overwritten and saved to {jpg_filepath.name} inside {output_dir.name}")
         except Exception as e:
             self.log(f"ERROR clipping or saving image: {e}")
 
