@@ -381,17 +381,13 @@ class OCRTomlEditor(ttk.Frame):
         try:
             # --- FONT CONFIGURATION FOR THAI ---
             plt.rcParams['font.family'] = 'Tahoma'
-            
-            plt.figure(figsize=(6, 5), facecolor='white')
-            ax = plt.gca()
-            ax.set_facecolor('white')
-            
-            plt.figure(figsize=(6, 5), facecolor='white')
-            ax = plt.gca()
+            fig, ax = plt.subplots(figsize=(6, 5))
+        
+            # Set the face color of the figure and the axes explicitly
+            fig.set_facecolor('white') 
             ax.set_facecolor('white')
             
             # Plot Polygon
-            # CHANGED: Added markerfacecolor='white' and increased markersize for visibility
             ax.plot(
                 easting, 
                 northing, 
@@ -431,7 +427,6 @@ class OCRTomlEditor(ttk.Frame):
                     bbox=dict(facecolor='white', alpha=0.8, edgecolor='none', pad=3))
 
             # REMAINING PLOT SETUP/SAVE CODE WOULD FOLLOW HERE
-
             ax.set_xlabel(f'{col_easting} (m)')
             ax.set_ylabel(f'{col_northing} (m)')
             ax.set_title(f"Parcel Plot: {toml_path.name}")
@@ -440,8 +435,10 @@ class OCRTomlEditor(ttk.Frame):
             
             self.log(f"I/O WRITE: Saving plot to {plot_png_path.name}")
             plt.savefig(plot_png_path, bbox_inches='tight', facecolor='white')
-            plt.close()
-
+            plt.clf()       # Clear the current figure (optional)
+            plt.close(fig)  # Close the specific figure 
+            plt.close('all')  # Ensures all hidden figures are closed (optional)
+            
             self.log(f"SUCCESS: Saved plot to {plot_png_path.name}")
             
             self.current_plot_path = plot_png_path 

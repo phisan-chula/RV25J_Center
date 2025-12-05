@@ -129,9 +129,7 @@ class RV25jProcessor:
 
     # -----------------------------------------------------------
     def parse_markdown_table(self, md_path: Path) -> pd.DataFrame:
-        MRK_COL = self.COLUMN_SPEC[0] 
-        N_COL   = self.COLUMN_SPEC[1] 
-        E_COL   = self.COLUMN_SPEC[2]
+        MRK_COL,N_COL,E_COL = self.COLUMN_SPEC 
         html = md_path.read_text(encoding="utf-8", errors="ignore").strip()
         soup = BeautifulSoup(html, "html.parser")
         table = soup.find("table")
@@ -371,17 +369,15 @@ class RV25jProcessor:
         toml_path = image_path.with_name(f"{prefix}_OCR.toml")
 
         vertices = []
-        col_marker   = self.COLUMN_SPEC[0]
-        col_northing = self.COLUMN_SPEC[1]
-        col_easting  = self.COLUMN_SPEC[2]
+        MRK_COL,N_COL,E_COL = self.COLUMN_SPEC
 
         # Note: df now only contains the three required columns (e.g., Marker, Northing, Easting)
         for _, r in df.iterrows():
             try:
                 # The values are strings in '0.000' format
-                n = float(r[col_northing])
-                e = float(r[col_easting])
-                vertices.append({"marker": r[col_marker], "north": n, "east": e})
+                n = float(r[N_COL])
+                e = float(r[E_COL])
+                vertices.append({"marker": r[MRK_COL], "north": n, "east": e})
             except Exception:
                 continue
 
